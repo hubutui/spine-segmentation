@@ -39,11 +39,11 @@ class SpineDataset(Dataset):
                 image = self.transform(image)
 
         if self.split == 'test':
-            return image
+            return image, self.image_list[idx]
         elif self.split == 'train':
             return image, mask
         else:
-            return image, mask, osp.join(self.root, self.split, 'groundtruth', self.mask_list[idx])
+            return image, mask, self.mask_list[idx]
 
 
 if __name__ == '__main__':

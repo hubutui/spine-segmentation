@@ -7,17 +7,14 @@ import os
 import os.path as osp
 import numpy as np
 import torch
-from torch import nn
 import tqdm
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 from dataset.SpineDataset import SpineDataset
 import SimpleITK as sitk
 from sklearn import metrics
 import gluoncvth as gcv
 from model.UNet import UNet
 from torchvision import transforms
-import torchvision.transforms.functional as TF
-from PIL import Image
 
 
 def val_transform(image, mask):
@@ -65,6 +62,8 @@ def get_args():
                         help='dir to save result for submission, default: submission')
     parser.add_argument('--num_classes', type=int, default=2,
                         help='number of classes, default: 2')
+    parser.add_argument('--test', action='store_true',
+                        help="run test instead of val, default: False")
 
     return parser.parse_args()
 
@@ -80,7 +79,10 @@ def main():
     with open('eval-config.json', 'w') as f:
         json.dump(args.__dict__, f, indent=4)
     # 数据
-    dataset = SpineDataset(root=args.root, split='val', transform=val_transform)
+    if args.test:
+        dataset = SpineDataset(root=args.root, split='test', transform=test_transform)
+    else:
+        dataset = SpineDataset(root=args.root, split='val', transform=val_transform)
 
     dataloader = DataLoader(dataset,
                             batch_size=1,
@@ -94,7 +96,6 @@ def main():
         device = torch.device('cuda')
     else:
         device = torch.device('cpu')
-    device = torch.device('cpu')
     if args.network == 'DeepLab':
         model = gcv.models.DeepLabV3(nclass=args.num_classes,
                                      backbone=args.backbone)
@@ -118,31 +119,48 @@ def main():
             model.eval()
             result = []
             tq = tqdm.tqdm(total=len(dataloader))
-            tq.set_description('test')
-            for i, (data, mask, mask_file) in enumerate(dataloader):
-                tq.update(1)
-                gt_img = sitk.ReadImage(mask_file[0])
-                data = data.to(device)
-                predict = np.zeros((data.size()[1], data.size()[3], data.size()[4]), dtype=np.uint16)
-                for idx in range(data.size()[1]):
-                    if args.network in ['DeepLab', 'FCN', 'PSPNet']:
-                        final_out = model(data[:, idx])[0]
-                    elif args.network == 'UNet':
-                        final_out = model(data[:, idx])
-                    predict[idx] = final_out.argmax(dim=1).cpu().squeeze().numpy().astype(np.uint16)
-                pred_img = sitk.GetImageFromArray(predict)
-                pred_img.CopyInformation(gt_img)
-                sitk.WriteImage(pred_img, osp.join(args.result_dir, mask_file[0].split('/')[-1]))
-                ppv, _, dice, _ = metrics.precision_recall_fscore_support(mask.numpy().flatten(), predict.flatten(), average='binary')
-                result.append([ppv, dice])
-            result = np.array(result)
-            result_mean = result.mean(axis=0)
-            result_std = result.std(axis=0)
-            print(result_mean, result_std)
-            np.savetxt(osp.join(args.result_dir, 'result.txt'),
-                       result_mean,
-                       fmt='%.3f',
-                       header='PPV, Dice')
+            if args.test:
+                tq.set_description('test')
+                for i, (data, img_file) in enumerate(dataloader):
+                    tq.update(1)
+                    data = data.to(device)
+                    predict = np.zeros((data.size()[1], data.size()[3], data.size()[4]), dtype=np.uint16)
+                    for idx in range(data.size()[1]):
+                        if args.network in ['DeepLab', 'FCN', 'PSPNet']:
+                            final_out = model(data[:, idx])[0]
+                        elif args.network == 'UNet':
+                            final_out = model(data[:, idx])
+                        predict[idx] = final_out.argmax(dim=1).cpu().squeeze().numpy().astype(np.uint16)
+                    pred_img = sitk.GetImageFromArray(predict)
+                    test_img = sitk.ReadImage(osp.join(args.root, 'test', 'image', img_file[0]))
+                    pred_img.CopyInformation(test_img)
+                    sitk.WriteImage(pred_img, osp.join(args.result_dir, img_file[0]))
+            else:
+                tq.set_description('val')
+                for i, (data, mask, mask_file) in enumerate(dataloader):
+                    tq.update(1)
+                    gt_img = sitk.ReadImage(osp.join(args.root, 'val', 'groundtruth', mask_file[0]))
+                    data = data.to(device)
+                    predict = np.zeros((data.size()[1], data.size()[3], data.size()[4]), dtype=np.uint16)
+                    for idx in range(data.size()[1]):
+                        if args.network in ['DeepLab', 'FCN', 'PSPNet']:
+                            final_out = model(data[:, idx])[0]
+                        elif args.network == 'UNet':
+                            final_out = model(data[:, idx])
+                        predict[idx] = final_out.argmax(dim=1).cpu().squeeze().numpy().astype(np.uint16)
+                    pred_img = sitk.GetImageFromArray(predict)
+                    pred_img.CopyInformation(gt_img)
+                    sitk.WriteImage(pred_img, osp.join(args.result_dir, mask_file[0]))
+                    ppv, _, dice, _ = metrics.precision_recall_fscore_support(mask.numpy().flatten(), predict.flatten(), average='binary')
+                    result.append([ppv, dice])
+                result = np.array(result)
+                result_mean = result.mean(axis=0)
+                result_std = result.std(axis=0)
+                print(result_mean, result_std)
+                np.savetxt(osp.join(args.result_dir, 'result.txt'),
+                           result_mean,
+                           fmt='%.3f',
+                           header='PPV, Dice')
 
             tq.close()
 
