@@ -1,3 +1,4 @@
+## 运行环境配置
 添加 channel：
 ```shell
 conda config --append channels conda-forge
@@ -24,4 +25,45 @@ CUDA_HOME=<path to cuda 10> pip install -v --no-cache-dir --global-option="--cpp
 ```shell
 tar xfv nccl_2.4.2-1+cuda10.0_x86_64.txz
 HOROVOD_CUDA_HOME=<path to cuda 10> HOROVOD_NCCL_HOME='pwd/nccl_2.4.2-1+cuda10.0_x86_64' HOROVOD_GPU_ALLREDUCE=NCCL pip install --no-cache-dir horovod
+```
+## 训练
+使用 4 个 GPU 进行训练：
+```shell
+CUDA_VISIBLE_DEVICES="0,1,2,3" horovodrun -np 4 -H localhost:4 python train_distributed.py --network UNet --backbone resnet50 --save_model_path checkpoint
+```
+## 在验证集上验证并计算结果
+```shell
+python eval.py --network UNet --backbone resnet50 --model  --result_dir result
+```
+## 在测试集上测试并保存结果
+```shell
+python eval.py --network UNet --backbone resnet50 --model  --result_dir result --test
+```
+## 数据存放
+数据存放目录结构如下：
+```text
+SpineData
+├── test
+│   └── image
+│       ├── Case196.nii.gz
+│       ├── Case201.nii.gz
+│       └── ...
+├── train
+│   ├── groundtruth
+│   │   ├── mask_case100.nii.gz
+│   │   ├── mask_case101.nii.gz
+│   │   ├── ...
+│   └── image
+│       ├── Case196.nii.gz
+│       ├── Case201.nii.gz
+│       └── ...
+├── val
+│   ├── groundtruth
+│   │   ├── mask_case100.nii.gz
+│   │   ├── mask_case101.nii.gz
+│   │   ├── ...
+│   └── image
+│       ├── Case196.nii.gz
+│       ├── Case201.nii.gz
+│       └── ...
 ```
