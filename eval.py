@@ -151,8 +151,8 @@ def main():
                     pred_img = sitk.GetImageFromArray(predict)
                     pred_img.CopyInformation(gt_img)
                     sitk.WriteImage(pred_img, osp.join(args.result_dir, mask_file[0]))
-                    ppv, _, dice, _ = metrics.precision_recall_fscore_support(mask.numpy().flatten(), predict.flatten(), average='binary')
-                    result.append([ppv, dice])
+                    ppv, sensitivity, dice, _ = metrics.precision_recall_fscore_support(mask.numpy().flatten(), predict.flatten(), average='binary')
+                    result.append([dice, ppv, sensitivity])
                 result = np.array(result)
                 result_mean = result.mean(axis=0)
                 result_std = result.std(axis=0)
@@ -160,7 +160,7 @@ def main():
                 np.savetxt(osp.join(args.result_dir, 'result.txt'),
                            result_mean,
                            fmt='%.3f',
-                           header='PPV, Dice')
+                           header='Dice, Sensitivity, PPV')
 
             tq.close()
 
