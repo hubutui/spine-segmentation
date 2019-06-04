@@ -9,8 +9,8 @@ conda create -n spine python=3.6.8 openmpi -y
 ```
 安装 torch 和 torchvision：
 ```shell
-pip install https://download.pytorch.org/whl/cu100/torch-1.1.0-cp37-cp37m-linux_x86_64.whl
-pip install https://download.pytorch.org/whl/cu100/torchvision-0.3.0-cp37-cp37m-linux_x86_64.whl
+pip3 install https://download.pytorch.org/whl/cu100/torch-1.1.0-cp36-cp36m-linux_x86_64.whl
+pip3 install https://download.pytorch.org/whl/cu100/torchvision-0.3.0-cp36-cp36m-linux_x86_64.whl
 pip install scipy scikit-image scikit-learn matplotlib pandas requests tqdm SimpleITK gluoncv-torch
 ```
 安装 apex：
