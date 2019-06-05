@@ -134,7 +134,8 @@ def main():
                     pred_img = sitk.GetImageFromArray(predict)
                     test_img = sitk.ReadImage(osp.join(args.root, 'test', 'image', img_file[0]))
                     pred_img.CopyInformation(test_img)
-                    sitk.WriteImage(pred_img, osp.join(args.result_dir, img_file[0]))
+                    result_file = 'mask_' + img_file[0].lower()
+                    sitk.WriteImage(pred_img, osp.join(args.result_dir, result_file))
             else:
                 tq.set_description('val')
                 for i, (data, mask, mask_file) in enumerate(dataloader):
