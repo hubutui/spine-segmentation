@@ -123,7 +123,7 @@ def main():
         else:
             model = gcv.models.DeepLabV3(nclass=args.num_classes, backbone=args.backbone)
         model.auxlayer.conv5[-1] = nn.Conv2d(256, args.num_classes, kernel_size=1)
-        model.head.conv5[-1] = nn.Conv2d(512, args.num_classes, kernel_size=1)
+        model.head.block[-1] = nn.Conv2d(256, args.num_classes, kernel_size=1)
     elif args.network == 'FCN':
         if args.voc:
             model = gcv.models.get_fcn_resnet101_voc(pretrained=True)
